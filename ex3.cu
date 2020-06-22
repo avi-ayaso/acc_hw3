@@ -247,7 +247,6 @@ public:
     }
 };
 
-
 class server_queues_context : public rdma_server_context {
 private:
     queues_gpu_context *gpu_context;
@@ -259,15 +258,9 @@ private:
     queue<gpu_to_cpu_entry> *gpu_to_cpu;
     
 public:
-<<<<<<< Updated upstream
-    explicit server_queues_context(uint16_t tcp_port) : 
-        rdma_server_context(tcp_port),
-        server(create_queues_server(256)){
-=======
     explicit server_queues_context(uint16_t tcp_port) : rdma_server_context(tcp_port),
             gpu_context(new queues_gpu_context(256))
     {
->>>>>>> Stashed changes
         
         /* TODO Initialize additional server MRs as needed. */
         gpu_context->getQueues(cpu_to_gpu , gpu_to_cpu); //get pointers to queues
@@ -285,48 +278,26 @@ public:
             exit(1);
         }
 
-        struct rpc_request connectionContext[2];
-        
-        connectionContext[0].request_id = 0;
-        connectionContext[0].input_rkey = mr_images_in->rkey;
-        connectionContext[0].input_length = IMG_SZ * N_IMAGES;
-        connectionContext[0].input_addr = (uintptr_t) images_in;
-        connectionContext[0].output_rkey = mr_images_out->rkey;
-        connectionContext[0].output_length = IMG_SZ * N_IMAGES;
-        connectionContext[0].output_addr = (uintptr_t) images_out;
-        connectionContext[1].request_id = 1;
-        connectionContext[1].input_rkey = mr_cpu_to_gpu->rkey;
-        connectionContext[1].input_length = sizeof(queue<cpu_to_gpu_entry>[blocks]);
-        connectionContext[1].input_addr = (uintptr_t) cpu_to_gpu;;
-        connectionContext[1].output_rkey = mr_gpu_to_cpu->rkey;
-        connectionContext[1].output_length = sizeof(queue<gpu_to_cpu_entry>[blocks]);
-        connectionContext[1].output_addr = (uintptr_t) gpu_to_cpu;
-
         /* TODO Exchange rkeys, addresses, and necessary information (e.g.
          * number of queues) with the client */
-         send_over_socket(connectionContext, 2 * sizeof(rpc_request));
+        int connectionEstablished = 1;
+        while (connectionEstablished != 0) {
+            connectionEstablished = recv_req();
+        }
         
     }
 
-    ~server_queues_context(){
+    ~server_queues_context()
+    {
         /* TODO destroy the additional server MRs here */
-        ibv_dereg_mr(mr_cpu_to_gpu);
-        ibv_dereg_mr(mr_gpu_to_cpu);
     }
 
-    virtual void event_loop() override{
+    virtual void event_loop() override
+    {
         /* TODO simplified version of server_rpc_context::event_loop. As the
          * client use one sided operations, we only need one kind of message to
          * terminate the server at the end. */
 
-<<<<<<< Updated upstream
-        
-    }
-
-    // This method takes care of recieving one send request.
-    
-
-=======
         rpc_request* req;
 		struct ibv_wc wc;
         while(1){
@@ -422,13 +393,12 @@ public:
         return 1;
     }
 };
->>>>>>> Stashed changes
 
 class client_queues_context : public rdma_client_context {
 private:
     /* TODO add necessary context to track the client side of the GPU's
      * producer/consumer queues */
-    struct rpc_request connectionContext[2];
+
     struct ibv_mr *mr_images_in; /* Memory region for input images */
     struct ibv_mr *mr_images_out; /* Memory region for output images */
     /* TODO define other memory regions used by the client here */
@@ -439,7 +409,6 @@ public:
         /* TODO communicate with server to discover number of queues, necessary
          * rkeys / address, or other additional information needed to operate
          * the GPU queues remotely. */
-         recv_over_socket(connectionContext, 2 * sizeof(rpc_request));
     }
 
     ~client_queues_context()
